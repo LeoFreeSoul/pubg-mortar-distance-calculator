@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PUBG Mortar Calc</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #c0c0c0;
+      font-family: "MS Sans Serif", "Tahoma", sans-serif;
+      font-size: 11px;
+      color: #000;
+      padding: 4px;
+      user-select: none;
+    }
+
+    .window {
+      background: #c0c0c0;
+      border-top: 2px solid #ffffff;
+      border-left: 2px solid #ffffff;
+      border-right: 2px solid #808080;
+      border-bottom: 2px solid #808080;
+    }
+
+    .title-bar {
+      background: #000080;
+      color: #ffffff;
+      font-weight: bold;
+      padding: 3px 4px;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+
+    .content { padding: 6px 8px; }
+
+    .group {
+      border: 1px solid #808080;
+      box-shadow: inset -1px -1px #ffffff, inset 1px 1px #dfdfdf;
+      padding: 8px 8px 6px 8px;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .group-label {
+      position: absolute;
+      top: -7px; left: 6px;
+      background: #c0c0c0;
+      padding: 0 3px;
+    }
+
+    .row { display: flex; align-items: center; margin-bottom: 5px; }
+    .row:last-child { margin-bottom: 0; }
+
+    label { width: 110px; flex-shrink: 0; }
+
+    input[type="text"] {
+      background: #ffffff;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-bottom: 1px solid #ffffff;
+      border-right: 1px solid #ffffff;
+      box-shadow: inset 1px 1px #404040;
+      padding: 2px 4px;
+      font-family: "MS Sans Serif", "Tahoma", sans-serif;
+      font-size: 11px;
+      color: #000;
+      outline: none;
+      flex: 1;
+    }
+    input[type="text"]:focus { outline: 1px dotted #000; outline-offset: -2px; }
+
+    .display-field {
+      background: #ffffff;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-bottom: 1px solid #ffffff;
+      border-right: 1px solid #ffffff;
+      box-shadow: inset 1px 1px #404040;
+      padding: 2px 4px;
+      font-family: "Courier New", monospace;
+      font-size: 11px;
+      min-width: 70px;
+      text-align: right;
+      display: inline-block;
+      color: #000080;
+    }
+
+    .result-value {
+      font-family: "Courier New", monospace;
+      font-size: 18px;
+      font-weight: bold;
+      color: #800000;
+      text-align: right;
+      background: #ffffff;
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-bottom: 1px solid #ffffff;
+      border-right: 1px solid #ffffff;
+      box-shadow: inset 1px 1px #404040;
+      padding: 2px 8px;
+      flex: 1;
+    }
+
+    button {
+      background: #c0c0c0;
+      border-top: 2px solid #ffffff;
+      border-left: 2px solid #ffffff;
+      border-right: 2px solid #808080;
+      border-bottom: 2px solid #808080;
+      padding: 3px 12px;
+      font-family: "MS Sans Serif", "Tahoma", sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    button:active {
+      border-top: 2px solid #808080;
+      border-left: 2px solid #808080;
+      border-right: 2px solid #ffffff;
+      border-bottom: 2px solid #ffffff;
+      padding: 4px 11px 2px 13px;
+    }
+
+    .coords-row { display: flex; gap: 8px; align-items: center; }
+    .coord-label { width: 20px; flex-shrink: 0; font-weight: bold; }
+
+    .statusbar {
+      background: #c0c0c0;
+      border-top: 1px solid #808080;
+      padding: 2px 6px;
+      font-size: 10px;
+      margin-top: 4px;
+    }
+    .status-panel {
+      border-top: 1px solid #808080;
+      border-left: 1px solid #808080;
+      border-bottom: 1px solid #ffffff;
+      border-right: 1px solid #ffffff;
+      padding: 1px 6px;
+      color: #000080;
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="title-bar">PUBG Mortar Calc</div>
+    <div class="content">
+
+      <!-- Instructions -->
+      <div class="group">
+        <span class="group-label">How to Use</span>
+        <div style="line-height: 1.5; margin-top: 2px; color: #333;">
+          1. Open the map in-game <b>(MAX ZOOM)</b> and press your <b>Shortcut</b> key.<br>
+          2. Click your mortar's location on the map.<br>
+          3. Click your target's location on the map.<br>
+          4. The distance is calculated and read out loud / sent to Discord (if set).
+          <b><i>Noted: Only work with normal res and borderless/fullscreen, won't work with stretch res</i></b>
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Discord</span>
+        <div class="row">
+          <label>Webhook URL:</label>
+          <input type="text" id="webhook-url" placeholder="https://discord.com/api/webhooks/...">
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Keybind</span>
+        <div class="row">
+          <label>Shortcut:</label>
+          <input type="text" id="keybind-input" value="Y" style="width:90px;flex:none">
+          <button id="btn-set-keybind" style="margin-left:6px">Set</button>
+          <span id="keybind-status" style="margin-left:8px;font-size:10px;color:#008000"></span>
+        </div>
+        <div style="font-size:10px;color:#555">Format: Alt+Z &nbsp;|&nbsp; Ctrl+Shift+X &nbsp;|&nbsp; F9</div>
+      </div>
+
+      <!-- Resolution / Scale -->
+      <div class="group">
+        <span class="group-label">Scale (auto)</span>
+        <div class="row">
+          <label>Resolution:</label>
+          <span style="font-family:monospace" id="detected-res">detecting...</span>
+        </div>
+        <div class="row">
+          <label>px per 100m:</label>
+          <span style="font-family:monospace;font-weight:bold;color:#800000" id="detected-scale">...</span>
+        </div>
+      </div>
+
+      <!-- Cursor -->
+      <div class="group">
+        <span class="group-label">Cursor Position</span>
+        <div class="coords-row">
+          <span class="coord-label">X:</span>
+          <span class="display-field" id="mouse-x">0</span>
+          <span class="coord-label" style="margin-left:12px">Y:</span>
+          <span class="display-field" id="mouse-y">0</span>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="group">
+        <span class="group-label">Result</span>
+        <div class="row">
+          <label>Distance:</label>
+          <span class="result-value" id="result-distance">---</span>
+          <span style="margin-left:6px;font-weight:bold;font-size:14px">m</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="statusbar">
+      <div class="status-panel" id="status-msg">Ready. Press keybind, click 2 points.</div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    let PX_PER_100M = 147; // fallback until main process responds
+
+    const mouseXEl      = document.getElementById('mouse-x');
+    const mouseYEl      = document.getElementById('mouse-y');
+    const resultDistEl  = document.getElementById('result-distance');
+    const statusMsg     = document.getElementById('status-msg');
+    const webhookInput  = document.getElementById('webhook-url');
+    const keybindInput  = document.getElementById('keybind-input');
+    const keybindStatus = document.getElementById('keybind-status');
+    const detectedRes   = document.getElementById('detected-res');
+    const detectedScale = document.getElementById('detected-scale');
+
+    // Fetch scale from main process on startup
+    ipcRenderer.invoke('get-scale').then(({ width, height, pxPer100m }) => {
+      PX_PER_100M = pxPer100m;
+      detectedRes.textContent   = `${width} x ${height}`;
+      detectedScale.textContent = pxPer100m.toFixed(1);
+      setStatus(`Ready. Scale: ${pxPer100m.toFixed(1)} px/100m`);
+    });
+
+    ipcRenderer.on('mouse-position', (_, pos) => {
+      mouseXEl.textContent = pos.x;
+      mouseYEl.textContent = pos.y;
+    });
+
+    ipcRenderer.on('points-captured', async (_, points) => {
+      const dx   = points[1].x - points[0].x;
+      const dy   = points[1].y - points[0].y;
+      const dist = Math.round(Math.sqrt(dx*dx + dy*dy) / PX_PER_100M * 100);
+
+      resultDistEl.textContent = dist;
+      setStatus(`${dist}m — sending to Discord...`);
+      speakDigits(dist);
+      await sendToDiscord(dist, points);
+    });
+
+    ipcRenderer.on('capture-cancelled', () => setStatus('Cancelled.'));
+
+    ipcRenderer.on('keybind-result', (_, ok) => {
+      keybindStatus.textContent = ok ? '✓ OK' : '✗ Failed';
+      keybindStatus.style.color = ok ? '#008000' : '#cc0000';
+      setStatus(ok ? `Keybind: ${keybindInput.value}` : 'Keybind failed, try another.');
+      saveSettings();
+    });
+
+    document.getElementById('btn-set-keybind').addEventListener('click', () => {
+      const kb = keybindInput.value.trim();
+      if (!kb) return;
+      keybindStatus.textContent = '...';
+      ipcRenderer.send('set-keybind', kb);
+    });
+
+    function speakDigits(dist) {
+      const utterance = new SpeechSynthesisUtterance(String(dist).split('').join(' '));
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    }
+
+    async function sendToDiscord(dist, points) {
+      const url = webhookInput.value.trim();
+      if (!url) { setStatus(`${dist}m — no webhook set.`); return; }
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `🎯 **${dist}m**`
+          })
+        });
+        setStatus(res.ok ? `Sent: ${dist}m` : `Discord error: HTTP ${res.status}`);
+      } catch (e) {
+        setStatus(`Send failed: ${e.message}`);
+      }
+    }
+
+    function setStatus(msg) { statusMsg.textContent = msg; }
+
+    function saveSettings() {
+      localStorage.setItem('mortar-settings', JSON.stringify({
+        webhook: webhookInput.value,
+        keybind: keybindInput.value
+      }));
+    }
+    webhookInput.addEventListener('input', saveSettings);
+    keybindInput.addEventListener('input', saveSettings);
+
+    try {
+      const s = JSON.parse(localStorage.getItem('mortar-settings') || '{}');
+      if (s.webhook) webhookInput.value = s.webhook;
+      if (s.keybind) keybindInput.value = s.keybind;
+    } catch(e) {}
+
+    // Send the initial keybind to main process
+    ipcRenderer.send('set-keybind', keybindInput.value.trim());
+  </script>
+</body>
+</html>

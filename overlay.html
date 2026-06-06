@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    #hint {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,128,0.85);
+      color: #ffffff;
+      font-family: "MS Sans Serif", Tahoma, sans-serif;
+      font-size: 12px;
+      padding: 4px 14px;
+      border: 1px solid #ffffff;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="cvs"></canvas>
+  <div id="hint">Click Point A — then Point B — ESC to cancel</div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const canvas = document.getElementById('cvs');
+    const ctx = canvas.getContext('2d');
+    const hint = document.getElementById('hint');
+
+    let points = [];
+    let mousePos = { x: 0, y: 0 };
+    let active = false;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    ipcRenderer.on('start-capture', () => {
+      points = [];
+      active = true;
+      hint.textContent = 'Click Point A — then Point B — ESC to cancel';
+      draw();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      mousePos = { x: e.screenX, y: e.screenY };
+      // Also send raw client coords for display
+      ipcRenderer.send('mouse-position', { x: e.screenX, y: e.screenY });
+      if (active) draw();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!active) return;
+
+      const pt = { x: e.screenX, y: e.screenY };
+      points.push(pt);
+
+      if (points.length === 1) {
+        hint.textContent = `A=(${pt.x},${pt.y}) — Now click Point B — ESC to cancel`;
+        draw();
+      } else if (points.length === 2) {
+        active = false;
+        draw();
+        setTimeout(() => {
+          ipcRenderer.send('points-captured', points);
+        }, 200);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        active = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ipcRenderer.send('cancel-capture');
+      }
+    });
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const mx = mousePos.x - window.screenX;
+      const my = mousePos.y - window.screenY;
+
+      // Crosshair at mouse
+      ctx.strokeStyle = 'rgba(255,255,0,0.8)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(mx, 0); ctx.lineTo(mx, canvas.height);
+      ctx.moveTo(0, my); ctx.lineTo(canvas.width, my);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Point A dot
+      if (points.length >= 1) {
+        const ax = points[0].x - window.screenX;
+        const ay = points[0].y - window.screenY;
+
+        // Line from A to mouse cursor
+        ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(mx, my);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Point A marker
+        drawPoint(ax, ay, '#ff4040', 'A');
+      }
+
+      // Point B dot
+      if (points.length >= 2) {
+        const bx = points[1].x - window.screenX;
+        const by = points[1].y - window.screenY;
+
+        // Solid line A→B
+        const ax = points[0].x - window.screenX;
+        const ay = points[0].y - window.screenY;
+        ctx.strokeStyle = '#ff4040';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+
+        drawPoint(bx, by, '#4080ff', 'B');
+      }
+    }
+
+    function drawPoint(x, y, color, label) {
+      // Outer ring
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner dot
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px MS Sans Serif, Tahoma, sans-serif';
+      ctx.fillText(label, x + 12, y - 8);
+    }
+  </script>
+</body>
+</html>

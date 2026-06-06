@@ -1,0 +1,34 @@
+{
+  "name": "pubg-mortar-calc",
+  "version": "1.0.0",
+  "description": "PUBG Mortar Distance Calculator",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.pubg.mortarcalc",
+    "productName": "PUBG Mortar Calc",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/dist/**",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "${productName}-win-${version}.exe"
+    }
+  }
+}
