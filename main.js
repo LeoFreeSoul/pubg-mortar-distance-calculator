@@ -49,8 +49,8 @@ function getPxPer100m() {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 470,
-    height: 480,
+    width: 400,
+    height: 245,
     resizable: false,
     title: 'PUBG 迫击炮测距',
     webPreferences: {
