@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <style>
@@ -26,7 +26,7 @@
       transform: translateX(-50%);
       background: rgba(0,0,128,0.85);
       color: #ffffff;
-      font-family: "MS Sans Serif", Tahoma, sans-serif;
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", Tahoma, sans-serif;
       font-size: 12px;
       padding: 4px 14px;
       border: 1px solid #ffffff;
@@ -37,7 +37,7 @@
 </head>
 <body>
   <canvas id="cvs"></canvas>
-  <div id="hint">Click Point A — then Point B — ESC to cancel</div>
+  <div id="hint">先点击炮位，再点击目标；按 Esc 取消</div>
 
   <script>
     const { ipcRenderer } = require('electron');
@@ -60,7 +60,7 @@
     ipcRenderer.on('start-capture', () => {
       points = [];
       active = true;
-      hint.textContent = 'Click Point A — then Point B — ESC to cancel';
+      hint.textContent = '先点击炮位，再点击目标；按 Esc 取消';
       draw();
     });
 
@@ -78,7 +78,7 @@
       points.push(pt);
 
       if (points.length === 1) {
-        hint.textContent = `A=(${pt.x},${pt.y}) — Now click Point B — ESC to cancel`;
+        hint.textContent = `炮位 (${pt.x}, ${pt.y}) 已选；请点击目标，按 Esc 取消`;
         draw();
       } else if (points.length === 2) {
         active = false;
@@ -168,7 +168,7 @@
 
       // Label
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px MS Sans Serif, Tahoma, sans-serif';
+      ctx.font = 'bold 11px Microsoft YaHei UI, Microsoft YaHei, Tahoma, sans-serif';
       ctx.fillText(label, x + 12, y - 8);
     }
   </script>

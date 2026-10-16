@@ -1,7 +1,7 @@
 {
   "name": "pubg-mortar-calc",
-  "version": "1.0.0",
-  "description": "PUBG Mortar Distance Calculator",
+  "version": "1.0.0-zh.1",
+  "description": "PUBG 迫击炮测距工具（简体中文版）",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -12,11 +12,12 @@
 
   },
   "devDependencies": {
+    "electron": "^31.7.7",
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.pubg.mortarcalc",
-    "productName": "PUBG Mortar Calc",
+    "appId": "com.pubg.mortarcalc.zhcn",
+    "productName": "PUBG 迫击炮测距",
     "asar": true,
     "directories": {
       "output": "dist"
@@ -28,7 +29,7 @@
     ],
     "win": {
       "target": "portable",
-      "artifactName": "${productName}-win-${version}.exe"
+      "artifactName": "PUBG-Mortar-Calc-zh-CN-${version}.exe"
     }
   }
 }

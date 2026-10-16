@@ -49,10 +49,10 @@ function getPxPer100m() {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 420,
+    width: 470,
+    height: 480,
     resizable: false,
-    title: 'PUBG Mortar Calc',
+    title: 'PUBG 迫击炮测距',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -77,11 +77,11 @@ function createTray() {
   const trayIcon = createTrayIcon();
 
   tray = new Tray(trayIcon);
-  tray.setToolTip('PUBG Mortar Calc');
+  tray.setToolTip('PUBG 迫击炮测距');
 
   const menu = Menu.buildFromTemplate([
     {
-      label: 'Show',
+      label: '显示窗口',
       click: () => {
         if (!mainWindow) return;
         mainWindow.show();
@@ -89,7 +89,7 @@ function createTray() {
       }
     },
     {
-      label: 'Hide',
+      label: '隐藏窗口',
       click: () => {
         if (!mainWindow) return;
         mainWindow.hide();
@@ -97,7 +97,7 @@ function createTray() {
     },
     { type: 'separator' },
     {
-      label: 'Quit',
+      label: '退出程序',
       click: () => app.quit()
     }
   ]);

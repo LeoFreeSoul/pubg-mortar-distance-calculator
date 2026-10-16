@@ -1,52 +1,40 @@
-# PUBG Mortar Distance Calculator
+# PUBG 迫击炮测距（简体中文版）
 
-Simple screen overlay tool. Calculates mortar distance by measuring pixel distance between 2 points and converting to in-game meters.
+这是 [reallav0/pubg-mortar-distance-calculator](https://github.com/reallav0/pubg-mortar-distance-calculator) 的中文界面版本。程序在屏幕上显示一个透明覆盖层，供你在 PUBG 地图上依次点击炮位和目标，再按地图比例尺估算两点间距离。程序不读取游戏数据。
 
-## Setup
+## 使用方法
 
-```
+1. 以正常分辨率运行 PUBG，打开地图并放大到最大。原项目注明支持无边框／全屏模式，不支持拉伸分辨率。
+2. 默认按 `Y` 开始测距。可在主窗口修改快捷键，点击「设置」。
+3. 在覆盖层上先点击迫击炮位置，再点击目标位置。按 `Esc` 可取消。
+4. 主窗口显示估算距离，并用中文语音播报。填写 Discord Webhook 地址后，程序也会向该地址发送距离；留空即可不用 Discord。
+
+程序根据屏幕分辨率自动选择或估算「每 100 米像素数」。结果仅供游戏内参考；若地图缩放、显示比例或目标标点不准，测距会有误差。实际落点还需根据地形高差和首发炮弹修正。
+
+## 从源码运行
+
+需要 Node.js 和 npm：
+
+```powershell
 npm install
 npm start
 ```
 
-Requires Node.js + npm installed.
+## 打包 Windows 便携版
 
-## Build (Windows .exe)
-
-```
+```powershell
 npm run dist
 ```
 
-The portable .exe is generated in the `dist` folder.
+生成的 EXE 位于 `dist` 文件夹。最小化主窗口后，它会留在系统托盘；可在托盘菜单中显示、隐藏或退出。
 
-## Usage
+## 计算方式
 
-1. **Calibrate**: Set how many on-screen pixels = 100m in-game.
-   - In PUBG, open map, find the white 100x100 grid square
-   - Measure how many pixels wide it is on your screen (e.g. 50px)
-   - Enter that number in the "100m = ? pixels" field
-
-2. **Keybind**: Default is `Alt+Z`. Change if needed, click Set.
-
-3. **Measure**: Press your keybind while hovering over PUBG
-   - An overlay appears — click Point A (mortar position), then Point B (target)
-   - Distance shows in the main window
-   - ESC to cancel
-
-4. **Discord**: Paste your webhook URL, click "Send to Discord"
-
-## Math
-
-```
-pixel_distance = sqrt((x2-x1)^2 + (y2-y1)^2)   <- Pythagorean
-ingame_distance = (pixel_distance / pixels_per_100m) * 100
+```text
+像素距离 = √((x₂ - x₁)² + (y₂ - y₁)²)
+游戏距离（米） = 像素距离 ÷ 每 100 米像素数 × 100
 ```
 
-No game data is read. Pure screen pixel measurement.
+## 说明
 
-## Notes
-
-- Window stays visible while PUBG is running (always-on-top not set on main window by default)
-- The transparent overlay only appears during capture, then disappears
-- Minimizing the main window hides it to the tray; click the tray icon to show it again
-- Settings (webhook, pixels, keybind) are auto-saved in localStorage
+此项目是非官方玩家工具，与 PUBG 官方无关。Discord Webhook 属于可选功能，地址会保存在程序本地设置中。使用前请自行了解游戏对第三方覆盖层工具的规定。

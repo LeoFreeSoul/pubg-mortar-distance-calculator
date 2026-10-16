@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>PUBG Mortar Calc</title>
+  <title>PUBG 迫击炮测距</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       background: #c0c0c0;
-      font-family: "MS Sans Serif", "Tahoma", sans-serif;
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Tahoma", sans-serif;
       font-size: 11px;
       color: #000;
       padding: 4px;
@@ -62,7 +62,7 @@
       border-right: 1px solid #ffffff;
       box-shadow: inset 1px 1px #404040;
       padding: 2px 4px;
-      font-family: "MS Sans Serif", "Tahoma", sans-serif;
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Tahoma", sans-serif;
       font-size: 11px;
       color: #000;
       outline: none;
@@ -109,7 +109,7 @@
       border-right: 2px solid #808080;
       border-bottom: 2px solid #808080;
       padding: 3px 12px;
-      font-family: "MS Sans Serif", "Tahoma", sans-serif;
+      font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Tahoma", sans-serif;
       font-size: 11px;
       cursor: pointer;
     }
@@ -143,56 +143,55 @@
 </head>
 <body>
   <div class="window">
-    <div class="title-bar">PUBG Mortar Calc</div>
+    <div class="title-bar">PUBG 迫击炮测距</div>
     <div class="content">
 
-      <!-- Instructions -->
+      <!-- 使用说明 -->
       <div class="group">
-        <span class="group-label">How to Use</span>
+        <span class="group-label">使用方法</span>
         <div style="line-height: 1.5; margin-top: 2px; color: #333;">
-          1. Open the map in-game <b>(MAX ZOOM)</b> and press your <b>Shortcut</b> key.<br>
-          2. Click your mortar's location on the map.<br>
-          3. Click your target's location on the map.<br>
-          4. The distance is calculated and read out loud / sent to Discord (if set).
-          <b><i>Noted: Only work with normal res and borderless/fullscreen, won't work with stretch res</i></b>
+          1. 在游戏中打开地图并<b>放大到最大</b>，按下测距快捷键。<br>
+          2. 在地图上点击迫击炮位置，再点击目标位置。<br>
+          3. 程序会显示并播报距离；填写 Webhook 后也会发送到 Discord。<br>
+          <b>注意：适用于正常分辨率的无边框／全屏模式，不支持拉伸分辨率。</b>
         </div>
       </div>
 
       <div class="group">
         <span class="group-label">Discord</span>
         <div class="row">
-          <label>Webhook URL:</label>
+          <label>Webhook 地址：</label>
           <input type="text" id="webhook-url" placeholder="https://discord.com/api/webhooks/...">
         </div>
       </div>
 
       <div class="group">
-        <span class="group-label">Keybind</span>
+        <span class="group-label">快捷键</span>
         <div class="row">
-          <label>Shortcut:</label>
+          <label>测距快捷键：</label>
           <input type="text" id="keybind-input" value="Y" style="width:90px;flex:none">
-          <button id="btn-set-keybind" style="margin-left:6px">Set</button>
+          <button id="btn-set-keybind" style="margin-left:6px">设置</button>
           <span id="keybind-status" style="margin-left:8px;font-size:10px;color:#008000"></span>
         </div>
-        <div style="font-size:10px;color:#555">Format: Alt+Z &nbsp;|&nbsp; Ctrl+Shift+X &nbsp;|&nbsp; F9</div>
+        <div style="font-size:10px;color:#555">可输入：Alt+Z &nbsp;|&nbsp; Ctrl+Shift+X &nbsp;|&nbsp; F9</div>
       </div>
 
-      <!-- Resolution / Scale -->
+      <!-- 分辨率与比例尺 -->
       <div class="group">
-        <span class="group-label">Scale (auto)</span>
+        <span class="group-label">比例尺（自动）</span>
         <div class="row">
-          <label>Resolution:</label>
-          <span style="font-family:monospace" id="detected-res">detecting...</span>
+          <label>屏幕分辨率：</label>
+          <span style="font-family:monospace" id="detected-res">检测中…</span>
         </div>
         <div class="row">
-          <label>px per 100m:</label>
+          <label>每 100 米像素：</label>
           <span style="font-family:monospace;font-weight:bold;color:#800000" id="detected-scale">...</span>
         </div>
       </div>
 
-      <!-- Cursor -->
+      <!-- 光标 -->
       <div class="group">
-        <span class="group-label">Cursor Position</span>
+        <span class="group-label">光标位置</span>
         <div class="coords-row">
           <span class="coord-label">X:</span>
           <span class="display-field" id="mouse-x">0</span>
@@ -201,20 +200,20 @@
         </div>
       </div>
 
-      <!-- Result -->
+      <!-- 结果 -->
       <div class="group">
-        <span class="group-label">Result</span>
+        <span class="group-label">测距结果</span>
         <div class="row">
-          <label>Distance:</label>
+          <label>距离：</label>
           <span class="result-value" id="result-distance">---</span>
-          <span style="margin-left:6px;font-weight:bold;font-size:14px">m</span>
+          <span style="margin-left:6px;font-weight:bold;font-size:14px">米</span>
         </div>
       </div>
 
     </div>
 
     <div class="statusbar">
-      <div class="status-panel" id="status-msg">Ready. Press keybind, click 2 points.</div>
+      <div class="status-panel" id="status-msg">就绪。按快捷键后依次点击炮位和目标。</div>
     </div>
   </div>
 
@@ -238,7 +237,7 @@
       PX_PER_100M = pxPer100m;
       detectedRes.textContent   = `${width} x ${height}`;
       detectedScale.textContent = pxPer100m.toFixed(1);
-      setStatus(`Ready. Scale: ${pxPer100m.toFixed(1)} px/100m`);
+      setStatus(`就绪。比例尺：每 100 米 ${pxPer100m.toFixed(1)} 像素`);
     });
 
     ipcRenderer.on('mouse-position', (_, pos) => {
@@ -252,17 +251,16 @@
       const dist = Math.round(Math.sqrt(dx*dx + dy*dy) / PX_PER_100M * 100);
 
       resultDistEl.textContent = dist;
-      setStatus(`${dist}m — sending to Discord...`);
       speakDigits(dist);
       await sendToDiscord(dist, points);
     });
 
-    ipcRenderer.on('capture-cancelled', () => setStatus('Cancelled.'));
+    ipcRenderer.on('capture-cancelled', () => setStatus('已取消测距。'));
 
     ipcRenderer.on('keybind-result', (_, ok) => {
-      keybindStatus.textContent = ok ? '✓ OK' : '✗ Failed';
+      keybindStatus.textContent = ok ? '✓ 已设置' : '✗ 设置失败';
       keybindStatus.style.color = ok ? '#008000' : '#cc0000';
-      setStatus(ok ? `Keybind: ${keybindInput.value}` : 'Keybind failed, try another.');
+      setStatus(ok ? `快捷键已设置：${keybindInput.value}` : '快捷键设置失败，请换一个。');
       saveSettings();
     });
 
@@ -274,8 +272,8 @@
     });
 
     function speakDigits(dist) {
-      const utterance = new SpeechSynthesisUtterance(String(dist).split('').join(' '));
-      utterance.lang = 'en-US';
+      const utterance = new SpeechSynthesisUtterance(`${dist} 米`);
+      utterance.lang = 'zh-CN';
       utterance.rate = 0.9;
       speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
@@ -283,7 +281,9 @@
 
     async function sendToDiscord(dist, points) {
       const url = webhookInput.value.trim();
-      if (!url) { setStatus(`${dist}m — no webhook set.`); return; }
+      if (!url) { setStatus(`测距完成：${dist} 米`); return; }
+
+      setStatus(`测距完成：${dist} 米，正在发送到 Discord…`);
 
       try {
         const res = await fetch(url, {
@@ -293,9 +293,9 @@
             content: `🎯 **${dist}m**`
           })
         });
-        setStatus(res.ok ? `Sent: ${dist}m` : `Discord error: HTTP ${res.status}`);
+        setStatus(res.ok ? `已发送到 Discord：${dist} 米` : `Discord 发送失败：HTTP ${res.status}`);
       } catch (e) {
-        setStatus(`Send failed: ${e.message}`);
+        setStatus(`发送失败：${e.message}`);
       }
     }
 
