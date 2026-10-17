@@ -43,6 +43,7 @@
       cursor: pointer;
     }
     #keybind-status { color: #006000; }
+    #calibration-status { color: #000080; }
     .result { display: flex; align-items: center; gap: 8px; }
     #result-distance {
       flex: 1;
@@ -66,12 +67,17 @@
   <div class="window">
     <div class="title-bar">PUBG 迫击炮测距</div>
     <div class="content">
-      <div class="hint">游戏地图放大到最大，按快捷键开始。<br>先点炮位，再点目标；按 Esc 取消。</div>
+      <div class="hint">地图调到要用的缩放后，可先校准 100 米。<br>按快捷键测距：先点炮位，再点目标；Esc 取消。</div>
       <div class="row">
         <label for="keybind-input">快捷键</label>
         <input id="keybind-input" value="Y" aria-label="测距快捷键">
         <button id="btn-set-keybind">设置</button>
         <span id="keybind-status"></span>
+      </div>
+      <div class="row">
+        <button id="btn-calibrate">校准 100 米</button>
+        <button id="btn-reset-calibration">恢复自动</button>
+        <span id="calibration-status">自动估算</span>
       </div>
       <div class="result">
         <span>距离</span>
@@ -86,12 +92,16 @@
     const { ipcRenderer } = require('electron');
     const keybindInput = document.getElementById('keybind-input');
     const keybindStatus = document.getElementById('keybind-status');
+    const calibrationStatus = document.getElementById('calibration-status');
     const resultDistance = document.getElementById('result-distance');
     const status = document.getElementById('status-msg');
     let pxPer100m = 147;
+    let autoPxPer100m = 147;
+    let calibrated = false;
 
     ipcRenderer.invoke('get-scale').then(({ pxPer100m: scale }) => {
-      pxPer100m = scale;
+      autoPxPer100m = scale;
+      if (!calibrated) pxPer100m = scale;
     }).catch(() => {
       status.textContent = '读取屏幕比例尺失败';
     });
@@ -102,6 +112,21 @@
       const distance = Math.round(Math.hypot(dx, dy) / pxPer100m * 100);
       resultDistance.textContent = distance;
       status.textContent = `测距完成：${distance} 米`;
+    });
+
+    ipcRenderer.on('calibration-points-captured', (_, points) => {
+      const scale = Math.hypot(
+        points[1].x - points[0].x,
+        points[1].y - points[0].y
+      );
+      if (scale < 10) {
+        status.textContent = '两点太近，请重试校准';
+        return;
+      }
+      pxPer100m = scale;
+      calibrated = true;
+      calibrationStatus.textContent = `已校准：${scale.toFixed(1)} 像素`;
+      status.textContent = '校准完成；改变地图缩放后请重新校准';
     });
 
     ipcRenderer.on('capture-cancelled', () => {
@@ -118,6 +143,18 @@
     document.getElementById('btn-set-keybind').addEventListener('click', () => {
       const keybind = keybindInput.value.trim();
       if (keybind) ipcRenderer.send('set-keybind', keybind);
+    });
+
+    document.getElementById('btn-calibrate').addEventListener('click', () => {
+      status.textContent = '请点击地图中一个 100 米小格同一条边的两端';
+      ipcRenderer.send('start-calibration');
+    });
+
+    document.getElementById('btn-reset-calibration').addEventListener('click', () => {
+      calibrated = false;
+      pxPer100m = autoPxPer100m;
+      calibrationStatus.textContent = '自动估算';
+      status.textContent = '已恢复自动比例尺（适用于地图最大缩放）';
     });
 
     let savedKeybind = localStorage.getItem('mortar-keybind');

@@ -49,6 +49,7 @@
     let points = [];
     let mousePos = { x: 0, y: 0 };
     let active = false;
+    let mode = 'measure';
 
     function resize() {
       canvas.width = window.innerWidth;
@@ -57,17 +58,18 @@
     resize();
     window.addEventListener('resize', resize);
 
-    ipcRenderer.on('start-capture', () => {
+    ipcRenderer.on('start-capture', (_, captureMode) => {
       points = [];
       active = true;
-      hint.textContent = '先点击炮位，再点击目标；按 Esc 取消';
+      mode = captureMode === 'calibrate' ? 'calibrate' : 'measure';
+      hint.textContent = mode === 'calibrate'
+        ? '校准：点击一个 100 米小格同一条边的两端；Esc 取消'
+        : '先点击炮位，再点击目标；按 Esc 取消';
       draw();
     });
 
     document.addEventListener('mousemove', (e) => {
       mousePos = { x: e.screenX, y: e.screenY };
-      // Also send raw client coords for display
-      ipcRenderer.send('mouse-position', { x: e.screenX, y: e.screenY });
       if (active) draw();
     });
 
@@ -78,7 +80,9 @@
       points.push(pt);
 
       if (points.length === 1) {
-        hint.textContent = `炮位 (${pt.x}, ${pt.y}) 已选；请点击目标，按 Esc 取消`;
+        hint.textContent = mode === 'calibrate'
+          ? '已选第一端；请点击同一条 100 米格线的另一端，按 Esc 取消'
+          : '炮位已选；请点击目标，按 Esc 取消';
         draw();
       } else if (points.length === 2) {
         active = false;
@@ -129,7 +133,7 @@
         ctx.setLineDash([]);
 
         // Point A marker
-        drawPoint(ax, ay, '#ff4040', 'A');
+        drawPoint(ax, ay, '#ff4040', mode === 'calibrate' ? '1' : 'A');
       }
 
       // Point B dot
@@ -148,7 +152,7 @@
         ctx.lineTo(bx, by);
         ctx.stroke();
 
-        drawPoint(bx, by, '#4080ff', 'B');
+        drawPoint(bx, by, '#4080ff', mode === 'calibrate' ? '2' : 'B');
       }
     }
 

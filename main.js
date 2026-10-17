@@ -1,12 +1,11 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage } = require('electron');
-const path = require('path');
 const zlib = require('zlib');
 
 let mainWindow;
 let overlayWindow;
 let tray;
 let isCapturing = false;
-let capturedPoints = [];
+let captureMode = 'measure';
 let currentKeybind = 'Y';
 
 // px per 100m at max zoom, keyed by game width resolution
@@ -50,7 +49,7 @@ function getPxPer100m() {
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 245,
+    height: 285,
     resizable: false,
     title: 'PUBG 迫击炮测距',
     webPreferences: {
@@ -229,12 +228,13 @@ function registerKeybind(keybind) {
   }
 }
 
-function startCapture() {
+function startCapture(mode = 'measure') {
+  if (isCapturing) return;
   isCapturing = true;
-  capturedPoints = [];
+  captureMode = mode;
   overlayWindow.show();
   overlayWindow.focus();
-  overlayWindow.webContents.send('start-capture');
+  overlayWindow.webContents.send('start-capture', mode);
 }
 
 function stopCapture() {
@@ -249,23 +249,24 @@ ipcMain.on('set-keybind', (event, keybind) => {
   event.reply('keybind-result', ok);
 });
 
+ipcMain.on('start-calibration', () => startCapture('calibrate'));
+
 ipcMain.on('points-captured', (event, points) => {
+  if (!isCapturing) return;
+  const resultEvent = captureMode === 'calibrate'
+    ? 'calibration-points-captured'
+    : 'points-captured';
   stopCapture();
   if (mainWindow) {
-    mainWindow.webContents.send('points-captured', points);
+    mainWindow.webContents.send(resultEvent, points);
   }
 });
 
 ipcMain.on('cancel-capture', () => {
+  if (!isCapturing) return;
   stopCapture();
   if (mainWindow) {
     mainWindow.webContents.send('capture-cancelled');
-  }
-});
-
-ipcMain.on('mouse-position', (event, pos) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('mouse-position', pos);
   }
 });
 
