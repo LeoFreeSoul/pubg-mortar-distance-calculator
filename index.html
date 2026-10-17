@@ -27,14 +27,13 @@
     .hint { line-height: 1.7; margin-bottom: 10px; }
     .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .row label { flex: none; }
-    input, select {
+    input {
       width: 90px;
       padding: 3px 5px;
       border: 2px solid;
       border-color: #808080 #fff #fff #808080;
       font: inherit;
     }
-    select { width: 180px; background: #fff; }
     button {
       padding: 3px 12px;
       border: 2px solid;
@@ -69,21 +68,7 @@
   <div class="window">
     <div class="title-bar">PUBG 迫击炮测距</div>
     <div class="content">
-      <div class="hint">先校准 100 米，再按快捷键测距。<br>先点炮位，再点目标；改变地图缩放后请重校。</div>
-      <div class="row">
-        <label for="map-select">当前地图</label>
-        <select id="map-select" aria-label="当前地图">
-          <option value="erangel">艾伦格</option>
-          <option value="miramar">米拉玛</option>
-          <option value="taego">泰戈</option>
-          <option value="deston">帝斯顿</option>
-          <option value="rondo">荣都</option>
-          <option value="vikendi">维寒迪</option>
-          <option value="sanhok">萨诺</option>
-          <option value="paramo">帕拉莫</option>
-          <option value="karakin">卡拉金</option>
-        </select>
-      </div>
+      <div class="hint">先校准 100 米，再按快捷键测距。<br>先点炮位，再点目标；换图或缩放后请重校。</div>
       <div class="row">
         <label for="keybind-input">测距快捷键</label>
         <input id="keybind-input" value="Y" aria-label="测距快捷键">
@@ -111,15 +96,8 @@
     const keybindStatus = document.getElementById('keybind-status');
     const calibrationShortcut = document.getElementById('calibration-shortcut');
     const calibrationStatus = document.getElementById('calibration-status');
-    const mapSelect = document.getElementById('map-select');
     const resultDistance = document.getElementById('result-distance');
     const status = document.getElementById('status-msg');
-    const knownMaps = new Set([
-      'erangel', 'miramar', 'taego', 'deston', 'rondo', 'vikendi',
-      'sanhok', 'paramo', 'karakin'
-    ]);
-    const savedMap = localStorage.getItem('mortar-map');
-    mapSelect.value = knownMaps.has(savedMap) ? savedMap : 'erangel';
 
     function showUncalibrated(message) {
       calibrationStatus.textContent = '当前比例：未校准｜请按 Alt+Y 校准';
@@ -150,8 +128,8 @@
       status.textContent = '校准完成；改变地图缩放后请重新校准';
     });
 
-    ipcRenderer.on('calibration-invalid', () => {
-      status.textContent = '两点太近，请重试校准';
+    ipcRenderer.on('calibration-invalid', (_, message) => {
+      status.textContent = message;
     });
 
     ipcRenderer.on('capture-cancelled', (_, mode) => {
@@ -173,12 +151,6 @@
     document.getElementById('btn-calibrate').addEventListener('click', () => {
       status.textContent = '请点击地图中一个 100 米小格同一条边的两端';
       ipcRenderer.send('start-calibration');
-    });
-
-    mapSelect.addEventListener('change', () => {
-      localStorage.setItem('mortar-map', mapSelect.value);
-      showUncalibrated('地图已切换，请重新校准');
-      ipcRenderer.send('clear-calibration', 'map-changed');
     });
 
     document.getElementById('btn-clear-calibration').addEventListener('click', () => {

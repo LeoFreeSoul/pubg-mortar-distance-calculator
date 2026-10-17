@@ -63,7 +63,7 @@
       active = true;
       mode = captureMode === 'calibrate' ? 'calibrate' : 'measure';
       hint.textContent = mode === 'calibrate'
-        ? '校准：点击一个 100 米小格同一条边的两端；Esc 取消'
+        ? '校准：点同一条横/竖 100 米格线两端；轻微点歪会自动校正'
         : '先点击炮位，再点击目标；按 Esc 取消';
       draw();
     });
@@ -81,7 +81,7 @@
 
       if (points.length === 1) {
         hint.textContent = mode === 'calibrate'
-          ? '已选第一端；请点击同一条 100 米格线的另一端，按 Esc 取消'
+          ? '已选第一端；沿同一条横/竖格线点另一端，按 Esc 取消'
           : '炮位已选；请点击目标，按 Esc 取消';
         draw();
       } else if (points.length === 2) {
@@ -121,6 +121,11 @@
       if (points.length >= 1) {
         const ax = points[0].x - window.screenX;
         const ay = points[0].y - window.screenY;
+        const endpoint = mode === 'calibrate'
+          ? snapToAxis(points[0], points[1] || mousePos)
+          : (points[1] || mousePos);
+        const ex = endpoint.x - window.screenX;
+        const ey = endpoint.y - window.screenY;
 
         // Line from A to mouse cursor
         ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
@@ -128,7 +133,7 @@
         ctx.setLineDash([6, 4]);
         ctx.beginPath();
         ctx.moveTo(ax, ay);
-        ctx.lineTo(mx, my);
+        ctx.lineTo(ex, ey);
         ctx.stroke();
         ctx.setLineDash([]);
 
@@ -138,8 +143,11 @@
 
       // Point B dot
       if (points.length >= 2) {
-        const bx = points[1].x - window.screenX;
-        const by = points[1].y - window.screenY;
+        const endpoint = mode === 'calibrate'
+          ? snapToAxis(points[0], points[1])
+          : points[1];
+        const bx = endpoint.x - window.screenX;
+        const by = endpoint.y - window.screenY;
 
         // Solid line A→B
         const ax = points[0].x - window.screenX;
@@ -154,6 +162,12 @@
 
         drawPoint(bx, by, '#4080ff', mode === 'calibrate' ? '2' : 'B');
       }
+    }
+
+    function snapToAxis(start, end) {
+      return Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
+        ? { x: end.x, y: start.y }
+        : { x: start.x, y: end.y };
     }
 
     function drawPoint(x, y, color, label) {

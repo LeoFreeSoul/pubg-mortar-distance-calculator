@@ -19,7 +19,7 @@ const CALIBRATION_KEYBIND = 'Alt+Y';
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 345,
+    height: 315,
     resizable: false,
     title: 'PUBG 迫击炮测距',
     webPreferences: {
@@ -297,28 +297,35 @@ ipcMain.on('set-keybind', (event, keybind) => {
 
 ipcMain.on('start-calibration', () => startCapture('calibrate'));
 
-ipcMain.on('clear-calibration', (event, reason) => {
+ipcMain.on('clear-calibration', () => {
   if (isCapturing) stopCapture();
-  clearCalibration(reason === 'map-changed'
-    ? '地图已切换，请重新校准'
-    : '已清除校准，请按 Alt+Y 重新校准');
+  clearCalibration();
 });
 
 ipcMain.on('points-captured', (event, points) => {
   if (!isCapturing || !Array.isArray(points) || points.length !== 2) return;
-  const pixelDistance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+  const dx = points[1].x - points[0].x;
+  const dy = points[1].y - points[0].y;
   const mode = captureMode;
   stopCapture();
   if (mode === 'calibrate') {
-    if (!Number.isFinite(pixelDistance) || pixelDistance < 10) {
-      if (mainWindow) mainWindow.webContents.send('calibration-invalid');
-      showToast('校准失败：两点太近');
+    const longSide = Math.max(Math.abs(dx), Math.abs(dy));
+    const shortSide = Math.min(Math.abs(dx), Math.abs(dy));
+    let error = null;
+    if (!Number.isFinite(longSide) || longSide < 10) error = '两点太近，请重试校准';
+    else if (shortSide > longSide * 0.2) error = '偏斜太大，请沿同一条格线重试';
+    if (error) {
+      if (mainWindow) mainWindow.webContents.send('calibration-invalid', error);
+      showToast(`校准失败：${error}`);
       return;
     }
-    pxPer100m = pixelDistance;
+    // Grid edges are horizontal or vertical; ignore small mouse offset on the other axis.
+    pxPer100m = longSide;
     if (mainWindow) mainWindow.webContents.send('calibration-completed', pxPer100m);
     showToast(`已校准：100 米 = ${pxPer100m.toFixed(1)} 像素`);
-  } else if (pxPer100m !== null && Number.isFinite(pixelDistance)) {
+  } else {
+    const pixelDistance = Math.hypot(dx, dy);
+    if (pxPer100m === null || !Number.isFinite(pixelDistance)) return;
     const distance = Math.round(pixelDistance / pxPer100m * 100);
     if (mainWindow) mainWindow.webContents.send('measurement-completed', distance);
     showToast(`距离 ${distance} 米`);
