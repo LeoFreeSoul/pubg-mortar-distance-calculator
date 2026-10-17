@@ -3,51 +3,18 @@ const zlib = require('zlib');
 
 let mainWindow;
 let overlayWindow;
+let toastWindow;
 let tray;
 let isCapturing = false;
 let captureMode = 'measure';
+let pxPer100m = null;
+let toastReady = false;
+let pendingToast = null;
+let toastTimer = null;
 let currentKeybind = 'Y';
 let currentMeasurementAccelerator = null;
 let calibrationShortcutAvailable = false;
 const CALIBRATION_KEYBIND = 'Alt+Y';
-
-// 8x8 km map estimate: px per 100m at max zoom, keyed by game width resolution
-// borderless = game res matches display res
-const PX_PER_100M_TABLE = {
-  1280: 97.1,
-  1366: 103.6,
-  1600: 121.3,
-  1920: 147.0,
-  2560: 196.0,
-  3840: 294.0,
-};
-
-function getPhysicalResolution() {
-  const display = screen.getPrimaryDisplay();
-  const { width, height } = display.bounds;
-  const scale = display.scaleFactor;
-  return {
-    width:  Math.round(width  * scale),
-    height: Math.round(height * scale)
-  };
-}
-
-function getPxPer100m() {
-  const { width } = getPhysicalResolution();
-  // exact match
-  if (PX_PER_100M_TABLE[width]) return PX_PER_100M_TABLE[width];
-  // linear interpolate between nearest two entries
-  const keys = Object.keys(PX_PER_100M_TABLE).map(Number).sort((a, b) => a - b);
-  for (let i = 0; i < keys.length - 1; i++) {
-    const lo = keys[i], hi = keys[i + 1];
-    if (width >= lo && width <= hi) {
-      const t = (width - lo) / (hi - lo);
-      return PX_PER_100M_TABLE[lo] + t * (PX_PER_100M_TABLE[hi] - PX_PER_100M_TABLE[lo]);
-    }
-  }
-  // fallback: scale linearly from 1920 baseline
-  return (width / 1920) * 147.0;
-}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -213,6 +180,65 @@ function createOverlay() {
   overlayWindow.hide();
 }
 
+function createToast() {
+  const { x, y, width, height } = screen.getPrimaryDisplay().bounds;
+  const toastWidth = 320;
+  toastWindow = new BrowserWindow({
+    width: toastWidth,
+    height: 76,
+    x: x + Math.round((width - toastWidth) / 2),
+    y: y + Math.round(height * 0.12),
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    focusable: false,
+    show: false,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+  toastWindow.setAlwaysOnTop(true, 'screen-saver');
+  toastWindow.setIgnoreMouseEvents(true);
+  toastWindow.loadFile('toast.html').then(() => {
+    toastReady = true;
+    if (pendingToast) {
+      const message = pendingToast;
+      pendingToast = null;
+      showToast(message);
+    }
+  });
+}
+
+function hideToast() {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = null;
+  pendingToast = null;
+  if (toastWindow && !toastWindow.isDestroyed()) toastWindow.hide();
+}
+
+function showToast(message) {
+  if (!toastReady) {
+    pendingToast = message;
+    return;
+  }
+  if (toastTimer) clearTimeout(toastTimer);
+  toastWindow.webContents.send('show-toast', message);
+  toastWindow.showInactive();
+  toastTimer = setTimeout(() => {
+    toastWindow.hide();
+    toastTimer = null;
+  }, 2400);
+}
+
+function clearCalibration(reason = '已清除校准，请按 Alt+Y 重新校准') {
+  pxPer100m = null;
+  hideToast();
+  if (mainWindow) mainWindow.webContents.send('calibration-cleared', reason);
+}
+
 function registerKeybind(keybind) {
   if (!keybind || typeof keybind !== 'string') return false;
 
@@ -243,6 +269,13 @@ function registerKeybind(keybind) {
 
 function startCapture(mode = 'measure') {
   if (isCapturing) return;
+  if (mode === 'measure' && pxPer100m === null) {
+    if (mainWindow) mainWindow.webContents.send('measurement-blocked');
+    showToast('未校准，请按 Alt+Y 校准');
+    return;
+  }
+  if (mode === 'calibrate') clearCalibration('正在校准：请选择 100 米格线两端');
+  else hideToast();
   isCapturing = true;
   captureMode = mode;
   overlayWindow.show();
@@ -264,30 +297,41 @@ ipcMain.on('set-keybind', (event, keybind) => {
 
 ipcMain.on('start-calibration', () => startCapture('calibrate'));
 
+ipcMain.on('clear-calibration', (event, reason) => {
+  if (isCapturing) stopCapture();
+  clearCalibration(reason === 'map-changed'
+    ? '地图已切换，请重新校准'
+    : '已清除校准，请按 Alt+Y 重新校准');
+});
+
 ipcMain.on('points-captured', (event, points) => {
-  if (!isCapturing) return;
-  const resultEvent = captureMode === 'calibrate'
-    ? 'calibration-points-captured'
-    : 'points-captured';
+  if (!isCapturing || !Array.isArray(points) || points.length !== 2) return;
+  const pixelDistance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+  const mode = captureMode;
   stopCapture();
-  if (mainWindow) {
-    mainWindow.webContents.send(resultEvent, points);
+  if (mode === 'calibrate') {
+    if (!Number.isFinite(pixelDistance) || pixelDistance < 10) {
+      if (mainWindow) mainWindow.webContents.send('calibration-invalid');
+      showToast('校准失败：两点太近');
+      return;
+    }
+    pxPer100m = pixelDistance;
+    if (mainWindow) mainWindow.webContents.send('calibration-completed', pxPer100m);
+    showToast(`已校准：100 米 = ${pxPer100m.toFixed(1)} 像素`);
+  } else if (pxPer100m !== null && Number.isFinite(pixelDistance)) {
+    const distance = Math.round(pixelDistance / pxPer100m * 100);
+    if (mainWindow) mainWindow.webContents.send('measurement-completed', distance);
+    showToast(`距离 ${distance} 米`);
   }
 });
 
 ipcMain.on('cancel-capture', () => {
   if (!isCapturing) return;
+  const mode = captureMode;
   stopCapture();
   if (mainWindow) {
-    mainWindow.webContents.send('capture-cancelled');
+    mainWindow.webContents.send('capture-cancelled', mode);
   }
-});
-
-// Renderer asks for the scale at startup
-ipcMain.handle('get-scale', () => {
-  const { width, height } = getPhysicalResolution();
-  const pxPer100m = getPxPer100m();
-  return { width, height, pxPer100m };
 });
 
 ipcMain.handle('get-calibration-shortcut', () => ({
@@ -298,6 +342,7 @@ ipcMain.handle('get-calibration-shortcut', () => ({
 app.whenReady().then(() => {
   createMainWindow();
   createOverlay();
+  createToast();
   createTray();
   calibrationShortcutAvailable = globalShortcut.register(CALIBRATION_KEYBIND, () => {
     if (!isCapturing) startCapture('calibrate');
