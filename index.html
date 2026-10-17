@@ -27,13 +27,14 @@
     .hint { line-height: 1.7; margin-bottom: 10px; }
     .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .row label { flex: none; }
-    input {
+    input, select {
       width: 90px;
       padding: 3px 5px;
       border: 2px solid;
       border-color: #808080 #fff #fff #808080;
       font: inherit;
     }
+    select { width: 180px; background: #fff; }
     button {
       padding: 3px 12px;
       border: 2px solid;
@@ -68,7 +69,21 @@
   <div class="window">
     <div class="title-bar">PUBG 迫击炮测距</div>
     <div class="content">
-      <div class="hint">地图调到要用的缩放后，可先校准 100 米。<br>按快捷键测距：先点炮位，再点目标；Esc 取消。</div>
+      <div class="hint">选择地图；非最大缩放时，先校准 100 米。<br>按快捷键测距：先点炮位，再点目标；Esc 取消。</div>
+      <div class="row">
+        <label for="map-select">当前地图</label>
+        <select id="map-select" aria-label="当前地图">
+          <option value="erangel">艾伦格（8×8 公里）</option>
+          <option value="miramar">米拉玛（8×8 公里）</option>
+          <option value="taego">泰戈（8×8 公里）</option>
+          <option value="deston">帝斯顿（8×8 公里）</option>
+          <option value="rondo">荣都（8×8 公里）</option>
+          <option value="vikendi">维寒迪（8×8 公里）</option>
+          <option value="sanhok">萨诺（4×4 公里）</option>
+          <option value="paramo">帕拉莫（3×3 公里）</option>
+          <option value="karakin">卡拉金（2×2 公里）</option>
+        </select>
+      </div>
       <div class="row">
         <label for="keybind-input">测距快捷键</label>
         <input id="keybind-input" value="Y" aria-label="测距快捷键">
@@ -96,10 +111,18 @@
     const keybindStatus = document.getElementById('keybind-status');
     const calibrationShortcut = document.getElementById('calibration-shortcut');
     const calibrationStatus = document.getElementById('calibration-status');
+    const mapSelect = document.getElementById('map-select');
     const resultDistance = document.getElementById('result-distance');
     const status = document.getElementById('status-msg');
+    const mapSizeKm = {
+      erangel: 8, miramar: 8, taego: 8, deston: 8, rondo: 8, vikendi: 8,
+      sanhok: 4, paramo: 3, karakin: 2
+    };
+    const savedMap = localStorage.getItem('mortar-map');
+    mapSelect.value = Object.hasOwn(mapSizeKm, savedMap) ? savedMap : 'erangel';
     let pxPer100m = 147;
     let autoPxPer100m = 147;
+    let baseAutoPxPer100m = 147;
     let calibrated = false;
 
     function updateScaleDisplay() {
@@ -108,10 +131,15 @@
         : `当前比例：自动估算｜100 米 ≈ ${autoPxPer100m.toFixed(1)} 像素`;
     }
 
-    ipcRenderer.invoke('get-scale').then(({ pxPer100m: scale }) => {
-      autoPxPer100m = scale;
-      if (!calibrated) pxPer100m = scale;
+    function updateAutoScale() {
+      autoPxPer100m = baseAutoPxPer100m * 8 / mapSizeKm[mapSelect.value];
+      if (!calibrated) pxPer100m = autoPxPer100m;
       updateScaleDisplay();
+    }
+
+    ipcRenderer.invoke('get-scale').then(({ pxPer100m: scale }) => {
+      baseAutoPxPer100m = scale;
+      updateAutoScale();
     }).catch(() => {
       status.textContent = '读取屏幕比例尺失败';
     });
@@ -163,6 +191,14 @@
     document.getElementById('btn-calibrate').addEventListener('click', () => {
       status.textContent = '请点击地图中一个 100 米小格同一条边的两端';
       ipcRenderer.send('start-calibration');
+    });
+
+    mapSelect.addEventListener('change', () => {
+      calibrated = false;
+      localStorage.setItem('mortar-map', mapSelect.value);
+      resultDistance.textContent = '---';
+      updateAutoScale();
+      status.textContent = '地图已切换；自动比例仅适用于最大缩放';
     });
 
     document.getElementById('btn-reset-calibration').addEventListener('click', () => {

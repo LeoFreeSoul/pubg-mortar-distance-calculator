@@ -11,7 +11,7 @@ let currentMeasurementAccelerator = null;
 let calibrationShortcutAvailable = false;
 const CALIBRATION_KEYBIND = 'Alt+Y';
 
-// px per 100m at max zoom, keyed by game width resolution
+// 8x8 km map estimate: px per 100m at max zoom, keyed by game width resolution
 // borderless = game res matches display res
 const PX_PER_100M_TABLE = {
   1280: 97.1,
@@ -52,7 +52,7 @@ function getPxPer100m() {
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 315,
+    height: 345,
     resizable: false,
     title: 'PUBG 迫击炮测距',
     webPreferences: {
