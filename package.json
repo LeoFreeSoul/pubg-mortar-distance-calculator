@@ -1,6 +1,6 @@
 {
   "name": "pubg-mortar-calc",
-  "version": "1.0.0-zh.3",
+  "version": "1.0.0-zh.4",
   "description": "PUBG 迫击炮测距工具（简体中文版）",
   "main": "main.js",
   "scripts": {
@@ -23,9 +23,10 @@
       "output": "dist"
     },
     "files": [
-      "**/*",
-      "!**/dist/**",
-      "!**/*.map"
+      "main.js",
+      "index.html",
+      "overlay.html",
+      "package.json"
     ],
     "win": {
       "target": "portable",

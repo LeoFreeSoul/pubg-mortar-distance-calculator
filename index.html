@@ -43,7 +43,8 @@
       cursor: pointer;
     }
     #keybind-status { color: #006000; }
-    #calibration-status { color: #000080; }
+    #calibration-shortcut { color: #000080; }
+    #calibration-status { color: #000080; margin-bottom: 10px; }
     .result { display: flex; align-items: center; gap: 8px; }
     #result-distance {
       flex: 1;
@@ -69,16 +70,17 @@
     <div class="content">
       <div class="hint">地图调到要用的缩放后，可先校准 100 米。<br>按快捷键测距：先点炮位，再点目标；Esc 取消。</div>
       <div class="row">
-        <label for="keybind-input">快捷键</label>
+        <label for="keybind-input">测距快捷键</label>
         <input id="keybind-input" value="Y" aria-label="测距快捷键">
         <button id="btn-set-keybind">设置</button>
         <span id="keybind-status"></span>
       </div>
       <div class="row">
         <button id="btn-calibrate">校准 100 米</button>
+        <span id="calibration-shortcut">Alt+Y</span>
         <button id="btn-reset-calibration">恢复自动</button>
-        <span id="calibration-status">自动估算</span>
       </div>
+      <div id="calibration-status">当前比例：自动估算</div>
       <div class="result">
         <span>距离</span>
         <span id="result-distance">---</span>
@@ -92,6 +94,7 @@
     const { ipcRenderer } = require('electron');
     const keybindInput = document.getElementById('keybind-input');
     const keybindStatus = document.getElementById('keybind-status');
+    const calibrationShortcut = document.getElementById('calibration-shortcut');
     const calibrationStatus = document.getElementById('calibration-status');
     const resultDistance = document.getElementById('result-distance');
     const status = document.getElementById('status-msg');
@@ -99,11 +102,23 @@
     let autoPxPer100m = 147;
     let calibrated = false;
 
+    function updateScaleDisplay() {
+      calibrationStatus.textContent = calibrated
+        ? `当前比例：已校准｜100 米 = ${pxPer100m.toFixed(1)} 像素`
+        : `当前比例：自动估算｜100 米 ≈ ${autoPxPer100m.toFixed(1)} 像素`;
+    }
+
     ipcRenderer.invoke('get-scale').then(({ pxPer100m: scale }) => {
       autoPxPer100m = scale;
       if (!calibrated) pxPer100m = scale;
+      updateScaleDisplay();
     }).catch(() => {
       status.textContent = '读取屏幕比例尺失败';
+    });
+
+    ipcRenderer.invoke('get-calibration-shortcut').then(({ keybind, available }) => {
+      calibrationShortcut.textContent = available ? keybind : `${keybind} 不可用`;
+      if (!available) calibrationShortcut.style.color = '#b00000';
     });
 
     ipcRenderer.on('points-captured', (_, points) => {
@@ -125,7 +140,7 @@
       }
       pxPer100m = scale;
       calibrated = true;
-      calibrationStatus.textContent = `已校准：${scale.toFixed(1)} 像素`;
+      updateScaleDisplay();
       status.textContent = '校准完成；改变地图缩放后请重新校准';
     });
 
@@ -153,7 +168,7 @@
     document.getElementById('btn-reset-calibration').addEventListener('click', () => {
       calibrated = false;
       pxPer100m = autoPxPer100m;
-      calibrationStatus.textContent = '自动估算';
+      updateScaleDisplay();
       status.textContent = '已恢复自动比例尺（适用于地图最大缩放）';
     });
 

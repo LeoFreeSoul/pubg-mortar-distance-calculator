@@ -7,6 +7,9 @@ let tray;
 let isCapturing = false;
 let captureMode = 'measure';
 let currentKeybind = 'Y';
+let currentMeasurementAccelerator = null;
+let calibrationShortcutAvailable = false;
+const CALIBRATION_KEYBIND = 'Alt+Y';
 
 // px per 100m at max zoom, keyed by game width resolution
 // borderless = game res matches display res
@@ -49,7 +52,7 @@ function getPxPer100m() {
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 285,
+    height: 315,
     resizable: false,
     title: 'PUBG 迫击炮测距',
     webPreferences: {
@@ -211,21 +214,31 @@ function createOverlay() {
 }
 
 function registerKeybind(keybind) {
-  globalShortcut.unregisterAll();
   if (!keybind || typeof keybind !== 'string') return false;
 
+  const accelerator = keybind.replace(/-/g, '+').replace(/\s/g, '');
+  if (accelerator.toLowerCase() === CALIBRATION_KEYBIND.toLowerCase()) return false;
+  if (accelerator === currentMeasurementAccelerator) return true;
+
+  const previous = currentMeasurementAccelerator;
+  if (previous) globalShortcut.unregister(previous);
   try {
-    // Convert hyphens to pluses and remove spaces to better match Electron's format
-    const accelerator = keybind.replace(/-/g, '+').replace(/\s/g, '');
     const registered = globalShortcut.register(accelerator, () => {
       if (!isCapturing) startCapture();
     });
-    return registered;
+    if (registered) {
+      currentMeasurementAccelerator = accelerator;
+      return true;
+    }
   } catch (e) {
-    // Return false gracefully without dumping a massive warning/stack trace if invalid
     console.warn(`Keybind rejected by system: ${keybind}`);
-    return false;
   }
+
+  currentMeasurementAccelerator = null;
+  if (previous && globalShortcut.register(previous, () => {
+    if (!isCapturing) startCapture();
+  })) currentMeasurementAccelerator = previous;
+  return false;
 }
 
 function startCapture(mode = 'measure') {
@@ -277,10 +290,18 @@ ipcMain.handle('get-scale', () => {
   return { width, height, pxPer100m };
 });
 
+ipcMain.handle('get-calibration-shortcut', () => ({
+  keybind: CALIBRATION_KEYBIND,
+  available: calibrationShortcutAvailable
+}));
+
 app.whenReady().then(() => {
   createMainWindow();
   createOverlay();
   createTray();
+  calibrationShortcutAvailable = globalShortcut.register(CALIBRATION_KEYBIND, () => {
+    if (!isCapturing) startCapture('calibrate');
+  });
   registerKeybind(currentKeybind);
 });
 
